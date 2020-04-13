@@ -1,0 +1,25 @@
+-- Я создал таблицы лайков и постов, заполнил ER-диагруммую.
+-- Подсчитать общее количество лайков, которые получили 10 самых молодых пользователей.
+
+SELECT 
+	(SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = profiles.user_id) AS users,
+	(SELECT COUNT(*) FROM likes WHERE user_id = profiles.user_id) AS likes,
+	birthday 
+FROM profiles ORDER BY birthday DESC LIMIT 10;
+   
+-- Определить кто больше поставил лайков (всего) - мужчины или женщины?   
+
+SELECT
+	(SELECT SUM((SELECT COUNT(*) FROM likes WHERE user_id = profiles.user_id)) FROM profiles WHERE gender = 'm') AS m_likes,
+	(SELECT SUM((SELECT COUNT(*) FROM likes WHERE user_id = profiles.user_id)) FROM profiles WHERE gender = 'f') AS f_likes
+FROM profiles LIMIT 1;
+
+-- Найти 10 пользователей, которые проявляют наименьшую активность в использовании социальной сети.
+
+SELECT 
+	(SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = profiles.user_id) AS users,
+	((SELECT COUNT(*) FROM likes WHERE user_id = profiles.user_id) + 
+	(SELECT COUNT(*) FROM media WHERE user_id = profiles.user_id) + 
+	(SELECT COUNT(*) FROM messages WHERE from_user_id = profiles.user_id)) AS total_activity
+FROM profiles ORDER BY total_activity LIMIT 10;
+
