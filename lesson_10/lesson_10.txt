@@ -1,0 +1,49 @@
+USE vk_com;
+
+-- 1) Проанализировать какие запросы могут выполняться наиболее часто
+-- в процессе работы приложения и добавить необходимые индексы.
+
+-- На мой взгляд запросы по email будут выполнятся давольно часто, а так же по имени и фамилии.
+
+CREATE UNIQUE INDEX users_email_idx ON users(email);
+
+CREATE INDEX users_first_name_last_name_idx ON users(first_name, last_name);
+
+-- На практике будет давольно частая выборка по полу и дате рождения, по стране и городу.
+
+CREATE INDEX profiles_gender_birthday_idx ON profiles(gender, birthday);
+
+CREATE INDEX profiles_city_country_idx ON profiles(city, country);
+
+-- Как было уже показано в уроке, частая выборка по сообщениям.
+
+CREATE INDEX messages_from_user_id_to_user_id_idx ON messages(from_user_id, to_user_id);
+
+-- Запросы по имени групп.
+
+CREATE INDEX communities_name_idx ON communities(name);
+
+-- 2)Задание на оконные функции. Провести аналитику в разрезе групп.
+-- Построить запрос, который будет выводить следующие столбцы:
+-- имя группы
+-- среднее количество пользователей в группах
+-- самый молодой пользователь в группе
+-- самый пожилой пользователь в группе
+-- количество пользователей в группе
+-- всего пользователей в системе
+-- отношение в процентах (количество пользователей в группе / всего пользователей в системе) * 100
+
+SELECT DISTINCT 
+	co.name AS communities_name,
+	COUNT(cu.user_id) OVER () / MAX(co.id) OVER () AS average_users,
+	MAX(p.birthday) OVER w AS youngest_user,
+	MIN(p.birthday) OVER w AS oldest_user,
+	COUNT(cu.user_id) OVER w AS users_in_groups,
+	COUNT(p.user_id) OVER () AS total_users,
+	COUNT(cu.user_id) OVER w / COUNT(p.user_id) OVER() * 100 AS "%%"
+	FROM profiles p
+	JOIN communities_users cu
+		ON p.user_id = cu.user_id 
+	RIGHT JOIN communities co
+	    ON co.id = cu.community_id
+	WINDOW w AS (PARTITION BY co.id);
