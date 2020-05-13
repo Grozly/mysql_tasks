@@ -1,0 +1,1021 @@
+-- Курсовой проект на тему: Интернет-магазин citilink.ru
+-- Разработана база данных на основе интернет-магазина citilink.ru, конечно реализован не весь функционал,
+-- но я постарался реализовать основные возможности данного интернет-магазина, в дальнейшем конечно можно доработать
+-- функционал и стараться достигнуть идеала, например добавить внешний ключ для таблицы reviews от таблицы media.id, что бы можно было в отзывы также
+-- добавлять фото, видео, не реализован функционал склада, что тоже необходимо добавить и является важным дополнением к базе данных.
+-- База данных заполнялась мной вручную, на парсеры не было времени.
+-- Для ознакомительных целей в базе данных заполнены не все таблицы.
+-- Данная база данных решает следующие задачи:
+-- 1) Есть возможность регистрации пользователей и хранение их личных данных в таблицах accounts, profiles.
+-- 2) Реализована структура хранения карточки товаров, категорий, производителей в таблицах categories, subcategories, 
+-- manufacturers, products_types, characteristics, products_attributes, products.
+-- 3) Есть возможность оставлять отзывы и обзоры на конкретный товар с оценкой пользователя, данные записываются в таблицы reviews, overviews, overviews_media.
+-- 4) Пользователи могут добавлять свои медиафайлы, медиафайлы разных типов (фото, видео), также к каждому товару нужны свои медиафайлы
+-- обычно это несколько фотографий и возможно видео, данные хранятся в таблицах media_types, media, media_products.
+-- 5) Есть возможность заказа товара разными способами, с доставкой или самовывозом, данные хранятся в таблицах orders, shops_delivery_points,
+-- pickup, delivery_types, deliveries.
+-- 6) Также пользователь может выбрать способ оплаты товара которые хранятся в таблице payment_methods.
+-- Кол-во таблиц - 21.
+
+-- Создаем новую базу данных.
+CREATE DATABASE citilink;
+
+-- Выбираем созданную базу данных.
+USE citilink;
+
+-- Создаем все необходимые таблицы на основе
+-- анализа структуры интернет-магазина citilink.ru
+CREATE TABLE `accounts` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `email` VARCHAR(255) NOT NULL UNIQUE,
+  `phone` VARCHAR(11) NOT NULL UNIQUE,
+  `pass` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME DEFAULT NOW(),
+  `updated_at` DATETIME DEFAULT NOW() ON UPDATE NOW()
+);
+
+CREATE TABLE `profiles` (
+  `account_id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL,
+  `nickname` VARCHAR(150) NOT NULL DEFAULT '',
+  `gender` VARCHAR(7) NOT NULL DEFAULT '',
+  `birthday` DATE NOT NULL,
+  `photo` VARCHAR(255) NOT NULL DEFAULT 'https://static.citilink.ru/media/global/noavatar.jpg?1588273340',
+  `created_at` DATETIME DEFAULT NOW(),
+  `updated_at` DATETIME DEFAULT NOW() ON UPDATE NOW()
+);
+
+CREATE TABLE `categories` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE `subcategories` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `category_id` INT UNSIGNED NOT NULL,
+  `name` VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE `manufacturers` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `subcategory_id` INT UNSIGNED NOT NULL,
+  `name` VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE `products_types` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE `characteristics` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL,
+  `text` VARCHAR(255) NOT NULL DEFAULT ''
+);
+
+CREATE TABLE `products_attributes` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT UNSIGNED NOT NULL,
+  `characteristic_id` INT UNSIGNED NOT NULL
+);
+
+CREATE TABLE `products` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `category_id` INT UNSIGNED NOT NULL,
+  `subcategory_id` INT UNSIGNED NOT NULL,
+  `manufacturer_id` INT UNSIGNED NOT NULL,
+  `product_type_id` INT UNSIGNED NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  `description` TEXT NOT NULL,
+  `price` DECIMAL(11,2) NOT NULL,
+  `created_at` DATETIME DEFAULT NOW(),
+  `updated_at` DATETIME DEFAULT NOW() ON UPDATE NOW()
+);
+
+CREATE TABLE `reviews` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT UNSIGNED NOT NULL,
+  `profile_account_id` INT UNSIGNED NOT NULL,
+  `assessment` INT(5) UNSIGNED NOT NULL,
+  `advantages` TEXT NOT NULL,
+  `limitations` TEXT NOT NULL,
+  `comment` TEXT DEFAULT NULL
+ );
+
+CREATE TABLE `overviews` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT UNSIGNED NOT NULL,
+  `profile_account_id` INT UNSIGNED NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  `text` TEXT NOT NULL,
+  `assessment` INT(5) UNSIGNED NOT NULL
+);
+
+CREATE TABLE `overviews_media` (
+  `overview_id` INT UNSIGNED NOT NULL,
+  `media_id` INT UNSIGNED NOT NULL
+);
+
+CREATE TABLE `media_types` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE `media` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `media_type_id` INT UNSIGNED NOT NULL,
+  `profile_account_id` INT UNSIGNED NOT NULL,
+  `file_path` VARCHAR(255) NOT NULL,
+  `size` INT NOT NULL,
+  `created_at` DATETIME DEFAULT NOW(),
+  `updated_at` DATETIME DEFAULT NOW() ON UPDATE NOW()
+);
+
+CREATE TABLE `media_products` (
+  `media_id` INT UNSIGNED NOT NULL,
+  `product_id` INT UNSIGNED NOT NULL
+);
+
+CREATE TABLE `orders` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `product_id` INT UNSIGNED NOT NULL,
+  `value` INT UNSIGNED NOT NULL DEFAULT 1,
+  `profile_account_id` INT UNSIGNED NOT NULL,
+  `pickup_id` INT UNSIGNED NULL,
+  `delivery_id` INT UNSIGNED NULL,
+  `payment_method_id` INT UNSIGNED NOT NULL,
+  `created_at` DATETIME DEFAULT NOW(),
+  `updated_at` DATETIME DEFAULT NOW() ON UPDATE NOW()
+);
+
+CREATE TABLE `shops_delivery_points` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE `pickup` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `shop_delivery_point_id` INT UNSIGNED NOT NULL,
+  `date_time` VARCHAR(255) NOT NULL,
+  `name_will_pickup` VARCHAR(100) NOT NULL,
+  `lastname_will_pickup` VARCHAR(100) NOT NULL,
+  `phone` VARCHAR(11) NOT NULL,
+  `last_phone` VARCHAR(11) NOT NULL DEFAULT ''
+);
+
+CREATE TABLE `delivery_types` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE `deliveries` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name_delivery` VARCHAR(100) NOT NULL,
+  `lastname_delivery` VARCHAR(100) NOT NULL,
+  `phone_delivery` VARCHAR(11) NOT NULL,
+  `last_phone_delivery` VARCHAR(11) NOT NULL DEFAULT '',
+  `city_delivery` VARCHAR(50) NOT NULL,
+  `street_delivery` VARCHAR(120) NOT NULL,
+  `house_delivery` INT UNSIGNED NOT NULL,
+  `housing_delivery` VARCHAR(3) NOT NULL DEFAULT '',
+  `structure_delivery` VARCHAR(3) NOT NULL DEFAULT '',
+  `flat_delivery` VARCHAR(3) NOT NULL DEFAULT '',
+  `porch_delivery` VARCHAR(3) NOT NULL DEFAULT '',
+  `floor_delivery` VARCHAR(3) NOT NULL DEFAULT '',
+  `delivery_type_id` INT UNSIGNED NOT NULL,
+  `date_delivery` DATE NOT NULL,
+  `time` TIME NOT NULL
+);
+
+CREATE TABLE `payment_methods` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `pay_method` VARCHAR(255) NOT NULL
+);
+
+
+-- Создаем связи между таблицами, указываем Foreign Keys.
+ALTER TABLE profiles 
+  ADD CONSTRAINT profiles_account_id_fk 
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
+      ON DELETE CASCADE;	
+   
+ALTER TABLE subcategories 
+  ADD CONSTRAINT subcategories_category_id_fk 
+    FOREIGN KEY (category_id) REFERENCES categories(id);
+   
+ALTER TABLE manufacturers 
+  ADD CONSTRAINT manufacturers_subcategory_id_fk 
+    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id);
+
+ALTER TABLE products 
+  ADD CONSTRAINT products_category_id_fk 
+    FOREIGN KEY (category_id) REFERENCES categories(id),
+  ADD CONSTRAINT products_subcategory_id_fk
+    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id),
+  ADD CONSTRAINT products_manufacturer_id_fk
+    FOREIGN KEY (manufacturer_id) REFERENCES manufacturers(id),
+  ADD CONSTRAINT products_product_type_id_fk
+    FOREIGN KEY (product_type_id) REFERENCES products_types(id);
+
+ALTER TABLE reviews 
+  ADD CONSTRAINT reviews_product_id_fk 
+    FOREIGN KEY (product_id) REFERENCES products(id),
+  ADD CONSTRAINT reviews_profile_account_id_fk 
+    FOREIGN KEY (profile_account_id) REFERENCES profiles(account_id);
+   
+ALTER TABLE overviews 
+  ADD CONSTRAINT overviews_product_id_fk 
+    FOREIGN KEY (product_id) REFERENCES products(id),
+  ADD CONSTRAINT overviews_profile_account_id_fk 
+    FOREIGN KEY (profile_account_id) REFERENCES profiles(account_id);
+
+ALTER TABLE overviews_media 
+  ADD CONSTRAINT overviews_media_overview_id_fk 
+    FOREIGN KEY (overview_id) REFERENCES overviews(id),
+  ADD CONSTRAINT overviews_media_media_id_fk 
+    FOREIGN KEY (media_id) REFERENCES media(id);
+   
+ALTER TABLE media 
+  ADD CONSTRAINT media_media_type_id_fk 
+    FOREIGN KEY (media_type_id) REFERENCES media_types(id),
+  ADD CONSTRAINT media_profile_account_id_fk 
+    FOREIGN KEY (profile_account_id) REFERENCES profiles(account_id);
+   
+ALTER TABLE media_products 
+  ADD CONSTRAINT media_products_media_id_fk 
+    FOREIGN KEY (media_id) REFERENCES media(id),
+  ADD CONSTRAINT media_products_product_id_fk 
+    FOREIGN KEY (product_id) REFERENCES products(id);
+
+ALTER TABLE products_attributes 
+  ADD CONSTRAINT products_characteristic_id_fk 
+    FOREIGN KEY (characteristic_id) REFERENCES characteristics(id),
+  ADD CONSTRAINT products_attributes_product_id_fk 
+    FOREIGN KEY (product_id) REFERENCES products(id);
+
+ALTER TABLE orders 
+  ADD CONSTRAINT orders_product_id_fk 
+    FOREIGN KEY (product_id) REFERENCES products(id),
+  ADD CONSTRAINT orders_profile_account_id_fk
+    FOREIGN KEY (profile_account_id) REFERENCES profiles(account_id),
+  ADD CONSTRAINT orders_pickup_id_fk
+    FOREIGN KEY (pickup_id) REFERENCES pickup(id),
+  ADD CONSTRAINT orders_delivery_id_fk
+    FOREIGN KEY (delivery_id) REFERENCES deliveries(id),
+  ADD CONSTRAINT orders_payment_method_id_fk
+    FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id);
+
+ALTER TABLE pickup 
+  ADD CONSTRAINT pickup_shop_delivery_point_id_fk 
+    FOREIGN KEY (shop_delivery_point_id) REFERENCES shops_delivery_points(id);
+
+ALTER TABLE deliveries 
+  ADD CONSTRAINT deliveries_delivery_type_id_fk 
+    FOREIGN KEY (delivery_type_id) REFERENCES delivery_types(id);
+   
+-- Добавляем индексы основываясь на возможные частые выборки в данной БД. 
+CREATE UNIQUE INDEX accounts_email_phone_idx 
+  ON accounts(email, phone);
+ 
+CREATE INDEX characteristics_name_idx 
+  ON characteristics(name);
+ 
+CREATE INDEX deliveries_name_lastname_phone_city_street_house_idx 
+  ON deliveries(name_delivery, lastname_delivery, phone_delivery, city_delivery, street_delivery, house_delivery); 
+ 
+CREATE INDEX manufacturers_name_idx 
+  ON manufacturers(name);
+ 
+CREATE INDEX media_size_idx 
+  ON media(size);
+ 
+CREATE INDEX orders_created_at_updated_at_idx 
+  ON orders(created_at, updated_at);
+ 
+CREATE INDEX pickup_name_will_pickup_lastname_will_pickup_phone_idx 
+  ON pickup(name_will_pickup, lastname_will_pickup, phone);
+ 
+CREATE INDEX products_name_price_idx 
+  ON products(name, price);
+ 
+CREATE INDEX products_types_name_idx 
+  ON products_types(name); 
+
+CREATE INDEX subcategories_name_idx 
+  ON subcategories(name);
+ 
+-- Заполняем таблицы данными, для ознакомительных целей на мой взгляд этого должно быть достаточно.
+INSERT INTO accounts VALUES
+  (1, 'alex@mail.ru', '89091236545', '123123', '2019-03-18 03:36:22', '2020-05-10 21:32:24')
+  (2, 'bob@mail.ru', '89024856765', '312321', '2020-05-10 03:36:22', '2020-05-10 22:51:44'),
+  (3, 'victoriya@gmail.ru', '89021216576', '111222', '2020-05-10 03:36:22', '2020-05-10 22:51:44'),
+  (4, 'gerda@mail.ru', '89084561234', '222111', '2020-05-10 03:36:22', '2020-05-10 22:51:44'),
+  (5, 'dmitri@gmail.ru', '89029924512', '333333', '2020-05-10 03:36:22', '2020-05-10 22:51:44'),
+  (6, 'Elena@mail.ru', '89126571211', '12314567890', '2020-05-10 03:36:22', '2020-05-10 22:51:44'),
+  (7, 'Jane@gmail.ru', '89024810092', '0987654321qwe', '2020-05-10 03:36:22', '2020-05-10 22:51:44'),
+  (8, 'Zoya@mail.ru', '89096981222', 'qwe1234567890', '2020-05-10 03:36:22', '2020-05-10 22:51:44'),
+  (9, 'Konstantin@gmail.ru', '89996541198', 'qweasdzxc', '2020-05-10 03:36:22', '2020-05-10 22:51:44'),
+  (10, 'lora@yandex.ru', '89106789146', 'ewqfghjkl', '2020-05-10 03:36:22', '2020-05-10 22:51:44'),
+  (11, 'mihail@yandex.ru', '89926890011', 'zxcasdvbnfgh', '2020-05-10 03:36:22', '2020-05-10 22:51:44');
+ 
+INSERT INTO profiles (account_id, name, nickname, gender, birthday, created_at, updated_at) VALUES  
+  (1, 'Александр', 'Alex666', 'Мужской', '1975-05-10',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (2, 'Боб', '', 'Мужской', '1978-11-11',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (3, 'Виктория', 'Tory', 'Женский', '1992-08-16',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (4, 'Герда', ' ', 'Женский', '1991-02-12',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (5, 'Дмитрий', 'Dim0n', 'Мужской', '1994-05-10',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (6, 'Елена', ' ', 'Мужской', '1975-05-25',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (7, 'Женя', ' ', 'Женский', '1984-10-08',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (8, 'Зоя', ' ', 'Женский', '1964-02-01',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (9, 'Константин', 'Kost', 'Мужской', '1961-06-10',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (10, 'Лора', ' ', 'Женский', '1989-05-10',  '2019-03-18 03:36:22', '2020-05-10 21:32:24'),
+  (11, 'Миша', 'Zetsu', 'Мужской', '2000-01-25',  '2019-03-18 03:36:22', '2020-05-10 21:32:24');
+  
+INSERT INTO categories VALUES
+  (1, 'Товары первой необходимости'),
+  (2, 'Смартфоны и гаджеты'),
+  (3, 'Ноутбуки и компьютеры'),
+  (4, 'Телевизоры, аудио-видео, Hi-Fi'),
+  (5, 'Бытовая техника для дома и кухни'),
+  (6, 'Садовая техника и электроинструмент'),
+  (7, 'Фото, видео, системы безопасности'),
+  (8, 'Автомобильная электроника'),
+  (9, 'Канцтовары, Мебель и Офисная техника'),
+  (10, 'Красота и здоровье'),
+  (11, 'Активны отдых, спорт и хобби'),
+  (12, 'Товары для геймеров');
+  
+INSERT INTO subcategories VALUES
+  (1, 1, 'Продукты питания'),
+  (2, 1, 'Антисептики'),
+  (3, 1, 'Средства защиты'),
+  (4, 1, 'Чистота и гигиена'),
+  (5, 1, 'Медицинские приборы'),
+  (6, 1, 'Товары для автономной жизни'),
+  (7, 1, 'Уход за полостью рта'),
+  (8, 2, 'Смартфоны'),
+  (9, 2, 'Планшеты'),
+  (10, 2, 'Мобильные телефоны'),
+  (11, 2, 'Гаджеты'),
+  (12, 2, 'Аксессуары для планшетов'),
+  (13, 2, 'Аксессуары для смартфонов'),
+  (14, 2, 'Электронные книги и аксессуары'),
+  (15, 2, 'Bluetooth гарнитуры'),
+  (16, 2, 'Наушники'),
+  (17, 2, 'Зарядные устройства'),
+  (18, 2, 'Усилители для наушников'),
+  (19, 2, 'Аксессуары для наушников'),
+  (20, 3, 'Ноутбуки'),
+  (21, 3, 'Ноутбуки-трансформеры'),
+  (22, 3, 'Ультрабуки'),
+  (23, 3, 'Моноблоки'),
+  (24, 3, 'Системные блоки'),
+  (25, 3, 'Комплектующие для ПК'),
+  (26, 3, 'Жесткие диски и SSD'),
+  (27, 3, 'Мониторы'),
+  (28, 3, 'Компьютеры'),
+  (29, 3, 'Компьютеры Ситилинк'),
+  (30, 3, 'Оргтехника'),
+  (31, 3, 'Расходные материалы для оргтехники'),
+  (32, 3, 'Манипуляторы и устройства ввода'),
+  (33, 3, 'Носители информации'),
+  (34, 3, 'Защита питания'),
+  (35, 3, 'Сетевое оборудование'),
+  (36, 3, 'Колонки для компьютера'),
+  (37, 3, 'Веб-камеры'),
+  (38, 3, 'Наушники с микрофоном'),
+  (39, 3, 'Серверы и СХД'),
+  (40, 3, 'Программное обеспечение'),
+  (41, 3, 'Чистящие средства'),
+  (42, 3, 'Аксессуары для ноутбуков и ПК'),
+  (43, 3, 'Игровые аксессуары'),
+  (44, 4, 'Телевизоры'),  
+  (45, 4, 'Техника Hi-Fi'), 
+  (46, 4, 'Спутниковое и цифровое ТВ'), 
+  (47, 4, 'Видеотехника'), 
+  (48, 4, 'Аудиотехника'), 
+  (49, 4, 'Проекторы и экраны'), 
+  (50, 4, 'LED панели'), 
+  (51, 4, 'Наушники'), 
+  (52, 4, 'Аксессуары для телевизоров'), 
+  (53, 4, 'Музыкальные инструменты'), 
+  (54, 4, 'Кронштейны'), 
+  (55, 4, 'Аудио-видео кабели'), 
+  (56, 4, 'Аксессуары для LFD-панелей'), 
+  (57, 5, 'Крупная бытовая техника'),
+  (58, 5, 'Встраиваемая техника'),
+  (59, 5, 'Вытяжки'),
+  (60, 5, 'Кофемашины, кофеварки'),
+  (61, 5, 'Мелкая бытовая техника'),
+  (62, 5, 'Принадлежности для бытовой техники'),
+  (63, 5, 'Посуда'),
+  (64, 5, 'Техника для дома'),
+  (65, 5, 'Швейное оборудование'),
+  (66, 5, 'Кондиционеры'),
+  (67, 5, 'Обогреватели'),
+  (68, 5, 'Климатическая техника'),
+  (69, 5, 'Водонагреватели'),
+  (70, 5, 'Очистка воды'),
+  (71, 6, 'Садовая техника'),
+  (72, 6, 'Садовый инвентарь'),
+  (73, 6, 'Электроинструмент'),
+  (74, 6, 'Аккумуляторы и зарядные устройства'),
+  (75, 6, 'Шлифовальные машины'),
+  (76, 6, 'Пилы'),
+  (77, 6, 'Измерительный инструмент'),
+  (78, 6, 'Наборы инструментов'),
+  (79, 6, 'Расходные материалы'),
+  (80, 6, 'Силовая техника'),
+  (81, 6, 'Пневматический инструмент'),
+  (82, 6, 'Фонари'),
+  (83, 6, 'Домкраты и аксессуары'),
+  (84, 6, 'Станки'),
+  (85, 6, 'Товары для дачи'),
+  (86, 6, 'Отпугиватели и уничтожители'),
+  (87, 6, 'Ручные инструменты'),
+  (88, 6, 'Поливочное оборудование'),
+  (89, 6, 'Снегоуборщики'),
+  (90, 7, 'Фотоаппараты'),
+  (91, 7, 'Объективы для фотоаппаратов'),
+  (92, 7, 'Вспышки для фотоаппаратов'),
+  (93, 7, 'Видеокамеры'),
+  (94, 7, 'Экшн камеры'),
+  (95, 7, 'Стедикамы'),
+  (96, 7, 'Аксессуары для стедикамов'),
+  (97, 7, 'Цифровые фоторамки'),
+  (98, 7, 'Умный дом'),
+  (99, 7, 'Системы безопасности'),
+  (100, 7, 'Футляры и сумки'),
+  (101, 7, 'Оптические приборы'),
+  (102, 7, 'Бинокли'),
+  (103, 7, 'Аксессуары'),
+  (104, 8, 'Автокресла'),
+  (105, 8, 'Навигаторы'),
+  (106, 8, 'Автомагнитолы'),
+  (107, 8, 'Автоакустика'),
+  (108, 8, 'Телевизоры автомобильные'),
+  (109, 8, 'Автомобильные мониторы'),
+  (110, 8, 'Видеорегистраторы'),
+  (111, 8, 'Видеорегистраторы с радар-детектором'),
+  (112, 8, 'Радар-детекторы'),
+  (113, 8, 'Устройства громкой связи'),
+  (114, 8, 'Парктроники'),
+  (115, 8, 'Автомобильные холодильники'),
+  (116, 8, 'Автомобильные пылесосы'),
+  (117, 8, 'Автосигнализации'),
+  (118, 8, 'Камеры заднего вида'),
+  (119, 8, 'Компрессоры и манометры'),
+  (120, 8, 'Аксессуары для автомобиля'),
+  (121, 9, 'Мебель'),
+  (122, 9, 'Аксессуары для мебели и интерьера >'),
+  (123, 9, 'Освещение'),
+  (124, 9, 'Конференц-связь и call-центры'),
+  (125, 9, 'Офисная техника'),
+  (126, 9, 'АТС и модули'),
+  (127, 9, 'Телефоны'),
+  (128, 9, 'Офисная канцелярия'),
+  (129, 9, 'Письменные принадлежности'),
+  (130, 9, 'Изделия из бумаги для офиса '),
+  (131, 9, 'Папки, файлы, системы архивации'),
+  (132, 9, 'Кожгалантерея'),
+  (133, 9, 'Сувениры и бизнес-подарки '),
+  (134, 9, 'Демонстрационное оборудование'),
+  (135, 9, 'Офисная эргономика'),
+  (136, 9, 'Канцтовары для школы'),
+  (137, 9, 'Ножи и аксессуары'),
+  (138, 10, 'Товары для укладки и стрижки'),
+  (139, 10, 'Товары для здоровья'),
+  (140, 10, 'Товары для красоты'),
+  (141, 10, 'Фены'),
+  (142, 10, 'Средства личной гигиены'),
+  (143, 10, 'Антисептики'),
+  (144, 10, 'Средства защиты'),
+  (145, 10, 'Продукты'),
+  (146, 10, 'Бритвы и эпиляторы'),
+  (147, 10, 'Зубные щетки и аксессуары'),
+  (148, 10, 'Медицинское оборудование'),
+  (149, 11, 'Спорт'),
+  (150, 11, 'Хобби'),
+  (151, 11, 'Рюкзаки, чемоданы, сумки'),
+  (152, 11, 'Аксессуары для путешествий'),
+  (153, 11, 'Товары для путешествий'),
+  (154, 11, 'Аксессуары для спорта и отдыха'),
+  (155, 12, 'Игровые ноутбуки'),
+  (156, 12, 'Игровые смартфоны'),
+  (157, 12, 'Игровые маршрутизаторы'),
+  (158, 12, 'Игровые планшеты'),
+  (159, 12, 'Игровые моноблоки'),
+  (160, 12, 'Игровые компьютеры'),
+  (161, 12, 'Игровые мониторы'),
+  (162, 12, 'Игровые телевизоры'),
+  (163, 12, 'Игровые аксессуары'),
+  (164, 12, 'Игровые комплектующие'),
+  (165, 12, 'Игровые консоли и аксессуары');
+  
+INSERT INTO manufacturers VALUES
+  (1, 8, 'ALCATEL'),
+  (2, 8, 'APPLE'), 
+  (3, 8, 'ARK'), 
+  (4, 8, 'BQ'), 
+  (5, 8, 'CLEVERCEL'), 
+  (6, 8, 'DIGMA'), 
+  (7, 8, 'FLY'), 
+  (8, 8, 'HAIER'), 
+  (9, 8, 'HONOR'), 
+  (10, 8, 'HTC'), 
+  (11, 8, 'HUAWEI'), 
+  (12, 8, 'LEECO'), 
+  (13, 8, 'LENOVO'), 
+  (14, 8, 'MEIZU'), 
+  (15, 8, 'MICROMAX'), 
+  (16, 8, 'MOTOROLA'), 
+  (17, 8, 'NOKIA'), 
+  (18, 8, 'NUBIA'), 
+  (19, 8, 'OPPO'), 
+  (20, 8, 'PHILIPS'), 
+  (21, 8, 'PRESTIGIO'), 
+  (22, 8, 'REALME'), 
+  (23, 8, 'SAMSUNG'), 
+  (24, 8, 'TCL'), 
+  (25, 8, 'VERTEX'), 
+  (26, 8, 'VIVO'), 
+  (27, 8, 'XIAOMI'), 
+  (28, 8, 'ZTE'), 
+  (29, 9, 'APPLE'),
+  (30, 9, 'ARIAN'),
+  (31, 9, 'BQ'),
+  (32, 9, 'DELL'),
+  (33, 9, 'DIGMA'),
+  (34, 9, 'HUAWEI'),
+  (35, 9, 'IRBIS'),
+  (36, 9, 'LENOVO'),
+  (37, 9, 'PRESTIGIO'),
+  (38, 9, 'SAMSUNG'),
+  (39, 9, 'TURBO'),
+  (40, 9, 'XIAOMI');
+ 
+INSERT INTO products_types (name) VALUES
+  ('Вода'),
+  ('Крупа'),
+  ('Макароны'),
+  ('Масло'),
+  ('Соль'),
+  ('Чай'),
+  ('Антисептик'),
+  ('Средства защиты'),
+  ('Бумага туалетная'),
+  ('Зубная паста'),
+  ('Зубная щетка'),
+  ('Мыло'),
+  ('Пеленки'),
+  ('Платки носовые'),
+  ('Подгузники'),
+  ('Порошок стиральный'),
+  ('Прокладки'),
+  ('Салфетки бумажные'),
+  ('Салфетки влажные'),
+  ('Шампунь'),
+  ('Тонометр'),
+  ('Термометр'),
+  ('Стетоскоп'),
+  ('Ингалятор компрессорный'),
+  ('Ингалятор паровой'),
+  ('Ингалятор ультразвуковой'),
+  ('Ингалятор электронно-сетчатый (меш)'),
+  ('Электрическая грелка'),
+  ('Электрическая простыня'),
+  ('Электрический плед'),
+  ('Электрическое одеяло'),
+  ('Тепловизор'),
+  ('Лампа'),
+  ('Батарейка литиевая'),
+  ('Батарейка солевая'),
+  ('Батарейка щелочная'),
+  ('Сетевой разветвитель'),
+  ('Сетевой удлинитель'),
+  ('Сетевой фильтр'),
+  ('Контейнер'),
+  ('Чайник электрический'),
+  ('Генератор бензиновый'),
+  ('Генератор бензиновый/газовый'),
+  ('Сушилка для овощей и фруктов'),
+  ('Внешний аккумулятор'),
+  ('Смартфон'),
+  ('Планшет'),
+  ('Умная колонка'),
+  ('Очки виртуальной реальности'),
+  ('Смарт-часы'),
+  ('Фитнес-трекер'),
+  ('Смарт-браслет'),
+  ('Зарядное устройство'),
+  ('Ремешок'),
+  ('Стекло защитное'),
+  ('Зарядная док-станция'),
+  ('Пленка защитная'),
+  ('Адаптер'),
+  ('Адаптер OTG'),
+  ('Кабель'),
+  ('Переходник'),
+  ('Сумка'),
+  ('Чехол'),
+  ('Подставка'),
+  ('Автомобильный держатель'),
+  ('Стилус-ручка'),
+  ('Стилус'),
+  ('microSD'),
+  ('microSDHC'),
+  ('microSDXC'),
+  ('SDHC'),
+  ('Автомобильное з/у'),
+  ('Беспроводное з/у'),
+  ('Комплект з/у'),
+  ('Настольное з/у'),
+  ('Сетевое з/у'),
+  ('Стедикам'),
+  ('Гарнитура bluetooth'),
+  ('Наушники с микрофоном'),
+  ('Наушники'),
+  ('Селфи-палка'),
+  ('Контроллер игровой'),
+  ('Ресивер'),
+  ('Внешний мод батарея'),
+  ('Портативная колонка'),
+  ('Держатель'),
+  ('Карта SIM'),
+  ('Кабель USB Type-C'),
+  ('Кабель Lightning'),
+  ('Кабель micro USB'),
+  ('Штатив-монопод'),
+  ('Штатив-трипод'),
+  ('Усилитель для наушников');
+ 
+INSERT INTO payment_methods (pay_method) VALUES
+  ('Банковской картой (онлайн)'),
+  ('Наличными или банковской картой при получении'),
+  ('Покупка в кредит'),
+  ('Яндекс.Деньги'),
+  ('Терминалы и кассы'),
+  ('WebMoney (комиссия +2.5%)'),
+  ('Оплата от юридического лица'),
+  ('Оплата через Сбербанк Бизнес Онлайн');
+
+INSERT INTO media_types (name) VALUES
+  ('image'),
+  ('video');
+ 
+INSERT INTO delivery_types (name) VALUES
+  ('Стандартная доставка'),
+  ('Доставка курьером'),
+  ('Доставка DPD');
+
+INSERT INTO characteristics (name, text) VALUES
+  ('Класс', 'смартфон'),
+  ('Тип корпуса	', 'смартфон'),
+  ('Класс', 'моноблок'),
+  ('Технология GSM 850', 'есть'),
+  ('Технология GSM 900/1800', 'есть'),
+  ('Технология GSM 1900', 'есть'),
+  ('Технология 3G', 'есть'),
+  ('Технология 4G (LTE)', 'есть'),
+  ('Количество SIM-карт	', '1SIM'),
+  ('Тип SIM-карты', 'нано-SIM + eSIM'),
+  ('Операционная система', 'iPhone iOS 13'),
+  ('Дисплей', '6.1", IPS'),
+  ('Разрешение дисплея', '1792×828'),
+  ('Число пикселей на дюйм', '326PPI'),
+  ('Сенсорный экран', 'Multitouch'),
+  ('Защитное покрытие экрана', 'стекло'),
+  ('Смартфон с «Монобровью»', 'ДА'),
+  ('Основная камера', '12Мп'),
+  ('Диафрагма, основная камера', 'F/1.8'),
+  ('Вспышка', 'есть'),
+  ('Тип вспышки', 'светодиодная'),
+  ('Цифровой зум', '5х'),
+  ('Запись видео', '4K'),
+  ('Фронтальная камера', '7Мп'),
+  ('Диафрагма, фронтальная камера', 'F/2.2'),
+  ('Особенности камер', 'Режим «Портрет» с улучшенным эффектом боке и функцией «Глубина», Портретное освещение, Функция Smart HDR для фотосъёмки, Оптическая стабилизация изображения, Шестилинзовый объектив, Панорамная съёмка (с разрешением до 63 Мп), Сенсор BSI'),
+  ('MP3 плеер', 'есть'),
+  ('MP3 мелодии вызова', 'есть'),
+  ('Поддерживаемые аудиоформаты', 'AAC-LC, HE-AAC, HE-AAC v2, защищённый AAC, MP3, линейный PCM, Apple Lossless, FLAC, Dolby Digital (AC-3), Dolby Digital Plus (E-AC-3) и Audible (форматы 2, 3, 4, Audible Enhanced Audio, AAX и AAX+)'),
+  ('Цвет', 'черный'),
+  ('Материал корпуса', 'стекло/алюминий'),
+  ('Размеры (ШхВхТ)	', '75.7 х 150.9 х 8.3 мм'),
+  ('Вес', '	194 г'),
+  ('Гарантия', '12 мес.'),
+  ('Страна производитель', 'Китай'),
+  ('Цвет', 'красный'),
+  ('Размеры (ШхВхТ)	', '75.7 х 150.9 х 8.3 мм'),
+  ('Количество SIM-карт', '2SIM'),
+  ('Операционная система', 'Android 10'),
+  ('Дисплей', '6.2", Dynamic AMOLED'),
+  ('Разрешение дисплея', '3200×1440'),
+  ('Число пикселей на дюйм', '563PPI'),
+  ('Защитное покрытие экрана', 'стекло Corning Gorilla Glass 6'),
+  ('Частота обновления', '120 Гц'),
+  ('Цвет', 'серый'),
+  ('Размеры (ШхВхТ)', '69.1 х 151.7 х 7.9 мм'),
+  ('Вес', '163 г'),
+  ('Страна производитель', 'Вьетнам'),
+  ('Число пикселей на дюйм', '511PPI'),
+  ('Дисплей', '6.9", Dynamic AMOLED'),
+  ('Размеры (ШхВхТ)', '76 х 166.9 х 8.8 мм'),
+  ('Вес', '220 г'),
+  ('Операционная система', '	Android 9.0'),
+  ('Дисплей', '6.47", AMOLED'),
+  ('Разрешение дисплея', '2340×1080'),
+  ('Число пикселей на дюйм', '398PPI'),
+  ('Защитное покрытие экрана', 'стекло Corning Gorilla Glass 5'),
+  ('Размеры (ШхВхТ)', '74.2 х 157.8 х 9.67 мм'),
+  ('Вес', '208 г'),
+  ('Цвет', 'белый'),
+  ('Цвет', 'синий');
+
+INSERT INTO products (category_id, subcategory_id, manufacturer_id, product_type_id, name, description, price) VALUES
+ (2, 8, 2, 46, 'Смартфон APPLE iPhone XR 64Gb, MRY42RU/A, черный', 'ОС iPhone iOS 13, экран: 6.1", IPS, 1792×828, процессор: Apple A12 Bionic, GPS, ГЛОНАСС, с защитой от пыли и влаги, время работы в режиме разговора, до: 25ч, встроенная память: 64Гб', 46545),
+ (2, 8, 2, 46, 'Смартфон APPLE iPhone 11 64Gb, MWLV2RU/A, красный', 'ОС iPhone iOS 13, экран: 6.1", IPS, 1792×828, процессор: Apple A13 Bionic, GPS, ГЛОНАСС, с защитой от пыли и влаги, встроенная память: 64Гб', 56745), 
+ (2, 8, 23, 46, 'Смартфон SAMSUNG Galaxy S20 8/128Gb, SM-G980F, серый', 'ОС Android 10, экран: 6.2", Dynamic AMOLED, 3200×1440, процессор: Exynos 990, 8-ми ядерный, GPS, ГЛОНАСС, с защитой от пыли и влаги, оперативная память: 8Гб, встроенная память: 128Гб', 69990), 
+ (2, 8, 23, 46, 'Смартфон SAMSUNG Galaxy S20 Ultra 12/128Gb, SM-G988F, черный', 'ОС Android 10, экран: 6.9", Dynamic AMOLED, 3200×1440, процессор: Exynos 990, 8-ми ядерный, GPS, ГЛОНАСС, с защитой от пыли и влаги, оперативная память: 12Гб, встроенная память: 128Гб', 99990), 
+ (2, 8, 27, 46, 'Смартфон XIAOMI Mi Note 10 Pro 256Gb, черный', 'ОС Android 9.0, экран: 6.47", AMOLED, 2340×1080, процессор: Qualcomm Snapdragon 730G, 2200МГц, 8-ми ядерный, GPS, ГЛОНАСС, чехол в комплекте, оперативная память: 8Гб, встроенная память: 256Гб', 44160),
+ (2, 8, 15, 46, 'Смартфон MICROMAX Q306, черный', 'ОСAndroid8.1, экран:4, TN, 800×480, процессор: MediaTekMT6580M, 1300МГц, 4-х ядерный, FM-радио, GPS, время работы в режиме разговора, до:6ч, в режиме ожидания, до:150ч, оперативная память:512Мб, встроенная память: 4Гб', 1297),
+ (2, 8, 23, 46, 'Смартфон SAMSUNG Galaxy A10 32Gb, SM-A105F, черный', 'ОС Android 9, экран: 6.2"", TFT, 1520×720, процессор: Exynos 7884B, 1600МГц, 8-ми ядерный, GPS, ГЛОНАСС, оперативная память: 2Гб, встроенная память: 32Гб', 7990),
+ (2, 8, 9, 46, 'Смартфон HONOR 10i 128Gb, синий', 'ОС Android 9, экран: 6.21"", 2340×1080, процессор: Kirin 710F, 2200МГц, 8-ми ядерный, FM-радио, GPS, ГЛОНАСС, чехол в комплекте, оперативная память: 4Гб, встроенная память: 128Гб', 12990),
+ (2, 8, 9, 46, 'Смартфон HONOR 8A 32Gb, черный', 'ОС Android 9.0, экран: 6.09"", TFT, 1560×720, процессор: MediaTek MT6765, 2300МГц, 8-ми ядерный, GPS, ГЛОНАСС, время работы в режиме разговора, до: 39ч, в режиме ожидания, до: 640ч, оперативная память: 2Гб, встроенная память: 32Гб', 7990),
+ (2, 8, 9, 46, 'Смартфон HONOR 10i 128Gb, красный', 'ОС Android 9, экран: 6.21"", 2340×1080, процессор: Kirin 710F, 2200МГц, 8-ми ядерный, FM-радио, GPS, ГЛОНАСС, чехол в комплекте, оперативная память: 4Гб, встроенная память: 128Гб', 12990),
+ (2, 8, 27, 46, 'Смартфон XIAOMI Redmi Note 8 Pro 6/64Gb, серый/минеральный', 'ОС Android 9.0, экран: 6.53"", IPS, 2340×1080, процессор: MediaTek Helio G90T, 2000МГц, 8-ми ядерный, FM-радио, GPS, ГЛОНАСС, время работы в режиме разговора, до: 24ч, в режиме ожидания, до: 260ч, чехол в комплекте, оперативная память: 6Гб, встроенная...', 17990),
+ (2, 8, 2, 46, 'Смартфон APPLE iPhone 7 32Gb, MN8X2RU/A, черный', 'ОС iPhone iOS 12, экран: 4.7"", Retina, 1334×750, процессор: Apple A10 Fusion, + Встроенный сопроцессор движения M10, ГЛОНАСС, с защитой от пыли и влаги, время работы в режиме разговора, до: 14ч, в режиме ожидания, до: 240ч, встроенная память:...', 25990),
+ (2, 8, 12, 46, 'Смартфон LEECO Le 2 64Gb, X527, серый', 'ОС Android 6.0, экран: 5.5"", IPS, 1920×1080, процессор: Qualcomm Snapdragon 652, 1800МГц, 8-ми ядерный, FM-радио, GPS, ГЛОНАСС, оперативная память: 3Гб, встроенная память: 64Гб', 6290),
+ (2, 8, 28, 46, 'Смартфон ZTE Blade V9 Vita 16Gb', 'ОС Android 8.1, экран: 5.45"", IPS, 1440×720, процессор: Qualcomm Snapdragon 435, 1400МГц, 8-ми ядерный, FM-радио, GPS, ГЛОНАСС, время работы в режиме разговора, до: 8ч, в режиме ожидания, до: 150ч, оперативная память: 2Гб, встроенная память: 16Гб', 5490),
+ (2, 8, 2, 46, 'Смартфон APPLE iPhone XR 64Gb, MRY42RU/A, черный', 'ОС iPhone iOS 13, экран: 6.1"", IPS, 1792×828, процессор: Apple A12 Bionic, , GPS, ГЛОНАСС, с защитой от пыли и влаги, время работы в режиме разговора, до: 25ч, встроенная память: 64Гб', 46545),
+ (2, 8, 27, 46, 'Смартфон XIAOMI Redmi 7A 16Gb, черный', 'ОС Android 9.0, экран: 5.45"", IPS, 1440×720, процессор: Qualcomm Snapdragon 439, 2000МГц, 8-ми ядерный, GPS, ГЛОНАСС, оперативная память: 2Гб, встроенная память: 16Гб', 5990),
+ (2, 8, 2, 46, 'Смартфон APPLE iPhone 11 64Gb, MWLT2RU/A, черный', 'ОС iPhone iOS 13, экран: 6.1"", IPS, 1792×828, процессор: Apple A13 Bionic, , GPS, ГЛОНАСС, с защитой от пыли и влаги, встроенная память: 64Гб', 56745),
+ (2, 8, 9, 46, 'Смартфон HONOR 10i 128Gb, черный', 'ОС Android 9, экран: 6.21"", 2340×1080, процессор: Kirin 710F, 2200МГц, 8-ми ядерный, FM-радио, GPS, ГЛОНАСС, чехол в комплекте, оперативная память: 4Гб, встроенная память: 128Гб', 12990),
+ (2, 8, 27, 46, 'Смартфон XIAOMI Redmi Note 8 Pro 6/64Gb, зеленый/лесной', 'ОС Android 9.0, экран: 6.53"", IPS, 2340×1080, процессор: MediaTek Helio G90T, 2000МГц, 8-ми ядерный, FM-радио, GPS, ГЛОНАСС, время работы в режиме разговора, до: 24ч, в режиме ожидания, до: 260ч, чехол в комплекте, оперативная память: 6Гб, встроенная...', 17990),
+ (2, 8, 22, 46, 'Смартфон REALME XT 128Gb, RMX1921, синий', 'ОС Android 9.0, экран: 6.4"", Super AMOLED, 2340×1080, процессор: Qualcomm Snapdragon 712, 2300МГц, 8-ми ядерный, FM-радио, GPS, ГЛОНАСС, время работы в режиме разговора, до: 15ч, в режиме ожидания, до: 669ч, чехол в комплекте, оперативная память:...', 18490),
+ (3, 9, 33, 47, 'Планшет DIGMA Plane 7700T 4G, 1GB, 8GB, 4G черный', 'сенсорный экран 7" (17.78 см), разрешение: 1280 x 800, Multitouch, поддержка 3G, поддержка 4G, Wi-Fi, Bluetooth, GPS, фронтальная камера: 0.3Мп, FM-тюнер, встроенная память: 8Гб, операционная система: Android 7.1', 3490),
+ (3, 9, 34, 47, 'Планшет HUAWEI MediaPad M5 Lite 8, 3Гб, 32GB, 4G серый', '(Jordan2-L09B), сенсорный экран 8" (20.32 см), разрешение: 1920 x 1200, Multitouch, поддержка 3G, поддержка 4G, Wi-Fi, Bluetooth, GPS, A-GPS, ГЛОНАСС, основная камера: 13Мп, фронтальная камера: 8Мп, fingerprint, встроенная память: 32Гб, операционная...', 15720), 
+ (3, 9, 33, 47, 'Планшет DIGMA CITI 8592 3G, 2GB, 32GB черный', 'сенсорный экран 8" (20.32 см), разрешение: 1280 x 800, Multitouch, поддержка 3G, Wi-Fi, Bluetooth, GPS, основная камера: 2Мп, фронтальная камера: 0.3Мп, FM-тюнер, встроенная память: 32Гб, операционная система: Android 9.0', 5290), 
+ (3, 9, 29, 47, 'Планшет APPLE iPad 2019 32Gb Wi-Fi MW742RU/A, 2GB, 32GB темно-серый', 'сенсорный экран 10.2" (25.9 см), разрешение: 2160 x 1620, Multitouch, Wi-Fi, Bluetooth, основная камера: 8Мп, фронтальная камера: 1.2Мп, fingerprint, встроенная память: 32Гб, операционная система: iOS', 27990), 
+ (3, 9, 34, 47, 'Планшет HUAWEI MediaPad T3 8.0, 2GB, 16GB, 4G серый', '(Kobe-L09A), сенсорный экран 8" (20.32 см), разрешение: 1280 x 800, Multitouch, поддержка 3G, поддержка 4G, Wi-Fi, Bluetooth, GPS, ГЛОНАСС, основная камера: 5Мп, фронтальная камера: 2Мп, встроенная память: 16Гб, операционная система: Android...', 9990),
+ (3, 9, 35, 47, 'Планшет IRBIS TZ721e, 1GB, 16GB черный', 'сенсорный экран 7" (17.78 см), разрешение: 1024 x 600, Multitouch, поддержка 3G, Wi-Fi, Bluetooth, GPRS, EDGE, GPS, A-GPS, фронтальная камера: 0.3Мп, FM-тюнер, встроенная память: 16Гб, операционная система: Android 7.0', 2530),
+ (3, 9, 34, 47, 'Планшет HUAWEI MediaPad T5 10, 3Гб, 32GB, 4G черный', '(AGS2-L09), сенсорный экран 10.1" (25.7 см), разрешение: 1920 x 1200, Multitouch, поддержка 3G, поддержка 4G, Wi-Fi, Bluetooth, GPRS, EDGE, GPS, A-GPS, ГЛОНАСС, основная камера: 5Мп, фронтальная камера: 2Мп, встроенная память: 32Гб, операционная...', 16990),
+ (3, 9, 35, 47, 'Планшет IRBIS TW51, 1GB, 32GB черный', 'сенсорный экран 10.1" (25.7 см), разрешение: 1280 x 800, Multitouch, Wi-Fi, Bluetooth, основная камера: 2Мп, фронтальная камера: 0.3Мп, док-станция, встроенная память: 32Гб, операционная система: Windows 10', 7990),
+ (3, 9, 37, 47, 'Планшет PRESTIGIO Muze 3831 4G, 1GB, 8GB, 4G черный', 'сенсорный экран 10.1" (25.7 см), разрешение: 1280 x 800, Multitouch, поддержка 3G, поддержка 4G, Wi-Fi, Bluetooth, основная камера: 2Мп, фронтальная камера: 0.3Мп, FM-тюнер, встроенная память: 8Гб, операционная система: Android 8.1', 5990),
+ (3, 9, 37, 47, 'Планшет PRESTIGIO Wize 10 3G, 1GB, 8GB черный', 'сенсорный экран 10.1" (25.7 см), разрешение: 1280 x 800, Multitouch, поддержка 3G, Wi-Fi, Bluetooth, GPS, основная камера: 2Мп, фронтальная камера: 0.3Мп, встроенная память: 8Гб, операционная система: Android 8.1', 4990);
+
+INSERT INTO products_attributes(product_id, characteristic_id) VALUES
+  (1, 1),
+  (1, 2),
+  (1, 3),
+  (1, 4),
+  (1, 5),
+  (1, 6),
+  (1, 7),
+  (1, 8),
+  (1, 9),
+  (1, 10),
+  (1, 11),
+  (1, 12),
+  (1, 13),
+  (1, 14),
+  (1, 15),
+  (1, 16),
+  (1, 17),
+  (1, 18),
+  (1, 19),
+  (1, 20),
+  (1, 21),
+  (1, 22),
+  (1, 23),
+  (1, 24),
+  (1, 25),
+  (1, 26),
+  (1, 27),
+  (1, 28),
+  (1, 29),
+  (1, 30),
+  (1, 31),
+  (1, 32),
+  (1, 33),
+  (1, 34),
+  (1, 35),
+  (2, 1),
+  (2, 2),
+  (2, 3),
+  (2, 4),
+  (2, 5),
+  (2, 6),
+  (2, 7),
+  (2, 8),
+  (2, 9),
+  (2, 10),
+  (2, 11), 
+  (2, 36),
+  (2, 37),
+  (3, 1),
+  (3, 2),
+  (3, 3),
+  (3, 4),
+  (3, 5),
+  (3, 6),
+  (3, 7),
+
+INSERT INTO deliveries 
+  (name_delivery, lastname_delivery, phone_delivery, 
+  last_phone_delivery, city_delivery, street_delivery, 
+  house_delivery, housing_delivery, flat_delivery, 
+  porch_delivery, floor_delivery, delivery_type_id, date_delivery, time) VALUES
+  ('Александр', 'Иванов', '89091236545', '89091236546', 'Пермь', 'Стахановская', 55, '', '', '4', '1', 1, '2020-05-11', '11:00:00'),
+  ('Виктория', 'Смик', '89021216576', '', 'Анапа', 'Мира', 84, '', '', '2', '1', 2, '2020-05-12', '15:00:00');
+ 
+INSERT INTO shops_delivery_points (name) VALUES
+  ('г.Пермь, ул. Маршала Рыбалко, д.90'),
+  ('г.Москва, ул. Пушкина, д.17'),
+  ('г.Омск, ул. Мира, д.55');
+
+INSERT INTO pickup (shop_delivery_point_id, date_time, name_will_pickup, lastname_will_pickup, phone, last_phone) VALUES
+  (1, '15 мая 2020 г. с 15-00 до 18-00', 'Зоя', 'Пальчик', '89096981222', ''),
+  (3, '12 мая 2020 г. с 12-00 до 20-00', 'Миша', 'Валуев', '89926890011', '89926890055');
+ 
+INSERT INTO orders (product_id, value, profile_account_id, pickup_id, delivery_id, payment_method_id) VALUES
+  (15, 2, 1, NULL, 1, 1),
+  (7, 1, 3, NULL, 2, 2),
+  (17, 1, 3, NULL, 2, 2),
+  (27, 1, 8, 1, NULL, 2),
+  (30, 1, 8, 1, NULL, 2),
+  (22, 4, 11, 2, NULL, 3);
+
+INSERT INTO overviews (product_id, profile_account_id, name, text, assessment) VALUES
+  (15, 1, 'Лучший смартфон', 'Купил данный телефон, APPLE всегда на высоте, недостатков нет.', 5),
+  (7, 3, 'Не покупайте это', 'Приобрела SAMSUNG Galaxy A10, дешевый пластик, тормозит, лучше не покупайте его', 1);
+
+INSERT INTO reviews (product_id, profile_account_id, assessment, advantages, limitations, comment) VALUES
+  (27, 8, 5, 'HUAWEI MediaPad оказался лучшим решением, стильный дизайн, быстрый в работе', 'Нет', 'Советую к покупке'),
+  (17, 3, 4, 'Лучшая цена-качество', 'Плохо держит батарею на холоде', 'Кому нужен стильный и производительный телефон, выбирайте этот');
+ 
+INSERT INTO overviews_media VALUES
+  (1, 1),
+  (1, 2),
+  (2, 18);
+
+INSERT INTO media (media_type_id, profile_account_id, file_path, size) VALUES
+  (1,1,'https://citilink.ru/images/file_76.jpg',2764426),
+  (1,1,'https://citilink.ru/images/file_761.jpg',203193706),
+  (1,1,'https://citilink.ru/images/file_726.jpg',486892),
+  (1,1,'https://citilink.ru/images/file_376.jpg',9933079),
+  (1,1,'https://citilink.ru/images/file_476.jpg',1272125),
+  (1,1,'https://citilink.ru/images/file_756.jpg',6461384),
+  (1,1,'https://citilink.ru/images/file_766.jpg',8390550),
+  (1,1,'https://citilink.ru/images/file_776.jpg',2468603),
+  (1,1,'https://citilink.ru/images/file_786.jpg',272519),
+  (1,1,'https://citilink.ru/images/file_716.jpg',39508962),
+  (1,1,'https://citilink.ru/images/file_726.jpg',7071364),
+  (1,1,'https://citilink.ru/images/file_761.jpg',6051869),
+  (1,1,'https://citilink.ru/images/file_176.jpg',8022819),
+  (1,1,'https://citilink.ru/images/file_276.jpg',2764426),
+  (1,1,'https://citilink.ru/images/file_376.jpg',158642831),
+  (1,1,'https://citilink.ru/images/file_476.jpg',2764426),
+  (1,2,'https://citilink.ru/images/file_576.jpg',3225176),
+  (1,3,'https://citilink.ru/images/file_676.jpg',3764426),
+  (1,4,'https://citilink.ru/images/file_111.jpg',2787426),
+  (1,5,'https://citilink.ru/images/file_112.jpg',2765526),
+  (1,6,'https://citilink.ru/images/file_124.jpg',2764526),
+  (1,7,'https://citilink.ru/images/file_125.jpg',2768826),
+  (1,8,'https://citilink.ru/images/file_126.jpg',2764426),
+  (1,9,'https://citilink.ru/images/file_131.jpg',170903),
+  (1,10,'https://citilink.ru/images/file_132.jpg',74795),
+  (1,11,'https://citilink.ru/images/file_161.jpg',2764426),
+  (1,1,'https://citilink.ru/images/file_178.jpg',2764411),
+  (1,1,'https://citilink.ru/images/file_129.jpg',276442),
+  (1,1,'https://citilink.ru/images/file_881.jpg',27614426),
+  (2,1,'https://citilink.ru/video/file_761.mp4',104813198),
+  (2,1,'https://citilink.ru/video/file_901.mp4',214813198);
+
+INSERT INTO media_products VALUES
+  (3, 1),
+  (4, 1),
+  (5, 2),
+  (6, 2),
+  (7, 3),
+  (8, 3),
+  (9, 3),
+  (10, 4),
+  (11, 5),
+  (12, 5),
+  (13, 6),
+  (14, 6),
+  (15, 7),
+  (16, 7),
+  (17, 8),
+  (19, 9),
+  (20, 10),
+  (21, 10),
+  (22, 11), 
+  (23, 12),
+  (24, 12),
+  (25, 12),
+  (26, 12),
+  (27, 13),
+  (28, 14),
+  (29, 15),
+  (30, 16), 
+  (31, 17);
+ 
+-- Скрипты характерных выборок 
+-- Какие товары были куплены, кто их купил и как произведена оплата 
+SELECT p.name, p.birthday, py.pay_method, pr.name  
+  FROM profiles p
+  JOIN orders o ON p.account_id = o.profile_account_id
+  JOIN products pr ON o.product_id = pr.id
+  JOIN payment_methods py ON py.id = o.payment_method_id;
+
+-- Все отзывы с отценкой 5, кто оставил и на какой товар
+SELECT p.name, a.email, pr.name, r.assessment 
+  FROM reviews r
+  JOIN profiles p ON p.account_id = r.profile_account_id 
+  JOIN products pr ON pr.id = r.product_id
+  JOIN accounts a ON a.id = p.account_id 
+  WHERE r.assessment > 4;
+ 
+-- Общая сумма всех товаров в категории 'Смартфоны и гаджеты'
+SELECT SUM(price) 
+  FROM products 
+  WHERE products.category_id = 2;
+
+-- Выборка показывает кол-во заказанных смартфонов.
+SELECT SUM(o.value) 
+  FROM orders o
+  JOIN products p ON p.id = o.product_id 
+  JOIN products_types pt ON pt.id = p.product_type_id 
+  WHERE pt.name = 'Смартфон';
+ 
+-- Определяем кто больше сделал заказов мужчины или женщины?
+SELECT
+  (SELECT gender FROM profiles WHERE account_id = orders.profile_account_id) AS gender,
+  COUNT(*) AS total
+  FROM orders
+  GROUP BY gender
+  ORDER BY total DESC
+  LIMIT 1;
+   
+-- Представления
+CREATE OR REPLACE VIEW products_categories_subcategories AS
+SELECT 
+  p.name AS product_name,
+  s.name AS subcat_name,
+  c.name AS cat_name	
+  FROM products AS p
+  JOIN categories AS c
+  ON p.category_id = c.id 
+  JOIN subcategories AS s
+  ON p.subcategory_id = s.id;
+   
+SELECT * FROM products_categories_subcategories;
+
+CREATE OR REPLACE VIEW profiles_orders_pay_methods AS
+SELECT 
+  p.name AS username,
+  p.birthday AS user_birthday,
+  py.pay_method AS pay_method,
+  pr.name AS product_name
+  FROM profiles p
+  JOIN orders o 
+  ON p.account_id = o.profile_account_id
+  JOIN products pr 
+  ON o.product_id = pr.id
+  JOIN payment_methods py 
+  ON py.id = o.payment_method_id;
+   
+SELECT * FROM profiles_orders_pay_methods;
+
+-- Хранимые процедуры / триггеры
+-- Хранимая процедура
+DROP PROCEDURE IF EXISTS get_products_by_categories;
+
+DELIMITER -
+
+CREATE PROCEDURE get_products_by_categories (IN c CHAR(3))
+  BEGIN
+    SELECT COUNT(*) 
+    FROM products p
+    WHERE p.category_id = c;
+  END-
+  
+DELIMITER ;
+
+CALL get_products_by_categories(1);
+
+
+-- Триггер на подсчет
+DELIMITER -
+
+CREATE TRIGGER categories_count AFTER INSERT ON categories
+  FOR EACH ROW 
+  BEGIN 
+	  SELECT COUNT(*) INTO @total FROM categories;
+  END-
+  
+DELIMITER ; 
+
+
+-- На этом я заканчиваю свою работу. Спасибо.
